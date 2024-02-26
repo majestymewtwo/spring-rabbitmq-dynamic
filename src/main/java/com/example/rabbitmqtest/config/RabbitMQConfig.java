@@ -1,53 +1,32 @@
 package com.example.rabbitmqtest.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@RequiredArgsConstructor
 public class RabbitMQConfig {
-    @Value("${rabbitmq.queue.name}")
-    private String queue;
-    @Value("${rabbitmq.queue.json.name}")
-    private String jsonQueue;
     @Value("${rabbitmq.exchange.name}")
     private String exchange;
-    @Value("${rabbitmq.routing.key}")
-    private String routingKey;
-    @Value("${rabbitmq.routing.json.key}")
-    private String jsonRoutingKey;
-
-    /* Bean for Rabbit MQ Queue */
-    @Bean
-    public Queue queue() {
-        return new Queue(queue);
-    }
-    @Bean
-    public Queue jsonQueue() {
-        return new Queue(jsonQueue);
+    private ConnectionFactory connectionFactory;
+    @Autowired
+    public RabbitMQConfig(ConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
     }
     /* Bean for Rabbit MQ Exchange  */
     @Bean
     public TopicExchange exchange() {
         return new TopicExchange(exchange);
-    }
-    /* Binding between Exchange and Queue using Routing Key */
-    @Bean
-    public Binding binding() {
-        return BindingBuilder.bind(queue())
-                .to(exchange())
-                .with(routingKey);
-    }
-    @Bean
-    public Binding jsonBinding() {
-        return BindingBuilder.bind(jsonQueue())
-                .to(exchange())
-                .with(jsonRoutingKey);
     }
     /* Bean for ConnectionFactory, RabbitTemplate and RabbitAdmin automatically configured by Spring Boot Auto Configuration. But to send JSON
     * Messages the MessageConverter of RabbitMQTemplate must be changed */
@@ -61,6 +40,9 @@ public class RabbitMQConfig {
         rabbitTemplate.setMessageConverter(converter());
         return rabbitTemplate;
     }
-
-
+    /* Using AMQP Admin for Dynamic Queues */
+    @Bean
+    public AmqpAdmin amqpAdmin() {
+        return new RabbitAdmin(connectionFactory);
+    }
 }
